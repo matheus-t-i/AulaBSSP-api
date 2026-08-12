@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { prisma } from '../../lib/prisma.js';
 import { AppError } from '../../lib/errors.js';
+import { param } from '../../lib/params.js';
 import {
   createClienteSchema,
   updateClienteSchema,
@@ -30,7 +31,7 @@ clientesRouter.get('/', authRequired, async (req, res, next) => {
 clientesRouter.get('/:id', authRequired, async (req, res, next) => {
   try {
     const item = await prisma.cliente.findUnique({
-      where: { id: req.params.id },
+      where: { id: param(req.params.id) },
       include: {
         responsavelPadrao: { select: { id: true, nome: true, email: true } },
         obrigacoes: {
@@ -96,7 +97,7 @@ clientesRouter.put('/:id', authRequired, requirePapel('GESTOR'), async (req, res
     const data = updateClienteSchema.parse(req.body);
     const { vincularPacoteRegime: _v, ...rest } = data;
     const updated = await prisma.cliente.update({
-      where: { id: req.params.id },
+      where: { id: param(req.params.id) },
       data: rest,
       include: { responsavelPadrao: { select: { id: true, nome: true } } },
     });
@@ -109,7 +110,7 @@ clientesRouter.put('/:id', authRequired, requirePapel('GESTOR'), async (req, res
 clientesRouter.delete('/:id', authRequired, requirePapel('GESTOR'), async (req, res, next) => {
   try {
     await prisma.cliente.update({
-      where: { id: req.params.id },
+      where: { id: param(req.params.id) },
       data: { ativo: false },
     });
     res.status(204).send();
@@ -120,7 +121,7 @@ clientesRouter.delete('/:id', authRequired, requirePapel('GESTOR'), async (req, 
 
 clientesRouter.post('/:id/obrigacoes', authRequired, requirePapel('GESTOR'), async (req, res, next) => {
   try {
-    const clienteId = req.params.id;
+    const clienteId = param(req.params.id);
     const cliente = await prisma.cliente.findUnique({ where: { id: clienteId } });
     if (!cliente) throw new AppError(404, 'Cliente não encontrado');
 
@@ -153,7 +154,7 @@ clientesRouter.delete(
   async (req, res, next) => {
     try {
       await prisma.clienteObrigacao.update({
-        where: { id: req.params.vinculoId },
+        where: { id: param(req.params.vinculoId) },
         data: { ativo: false },
       });
       res.status(204).send();

@@ -2,6 +2,7 @@ import { Router } from 'express';
 import bcrypt from 'bcryptjs';
 import { prisma } from '../../lib/prisma.js';
 import { AppError } from '../../lib/errors.js';
+import { param } from '../../lib/params.js';
 import { createColaboradorSchema, updateColaboradorSchema } from '../../lib/schemas.js';
 import { authRequired, requirePapel } from '../../middleware/auth.js';
 
@@ -32,7 +33,7 @@ colaboradoresRouter.get('/', authRequired, async (_req, res, next) => {
 colaboradoresRouter.get('/:id', authRequired, async (req, res, next) => {
   try {
     const item = await prisma.colaborador.findUnique({
-      where: { id: req.params.id },
+      where: { id: param(req.params.id) },
       select: {
         id: true,
         nome: true,
@@ -84,7 +85,7 @@ colaboradoresRouter.put('/:id', authRequired, requirePapel('GESTOR'), async (req
     if (senha) updateData.senhaHash = await bcrypt.hash(senha, 10);
 
     const updated = await prisma.colaborador.update({
-      where: { id: req.params.id },
+      where: { id: param(req.params.id) },
       data: updateData,
       select: {
         id: true,
@@ -106,7 +107,7 @@ colaboradoresRouter.put('/:id', authRequired, requirePapel('GESTOR'), async (req
 colaboradoresRouter.delete('/:id', authRequired, requirePapel('GESTOR'), async (req, res, next) => {
   try {
     await prisma.colaborador.update({
-      where: { id: req.params.id },
+      where: { id: param(req.params.id) },
       data: { ativo: false },
     });
     res.status(204).send();

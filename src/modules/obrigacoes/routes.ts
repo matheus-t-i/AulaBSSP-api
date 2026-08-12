@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { prisma } from '../../lib/prisma.js';
 import { AppError } from '../../lib/errors.js';
+import { param } from '../../lib/params.js';
 import { createObrigacaoSchema, updateObrigacaoSchema } from '../../lib/schemas.js';
 import { authRequired, requirePapel } from '../../middleware/auth.js';
 
@@ -25,7 +26,7 @@ obrigacoesRouter.get('/', authRequired, async (req, res, next) => {
 
 obrigacoesRouter.get('/:id', authRequired, async (req, res, next) => {
   try {
-    const item = await prisma.obrigacao.findUnique({ where: { id: req.params.id } });
+    const item = await prisma.obrigacao.findUnique({ where: { id: param(req.params.id) } });
     if (!item) throw new AppError(404, 'Obrigação não encontrada');
     res.json(item);
   } catch (e) {
@@ -47,7 +48,7 @@ obrigacoesRouter.put('/:id', authRequired, requirePapel('GESTOR'), async (req, r
   try {
     const data = updateObrigacaoSchema.parse(req.body);
     const updated = await prisma.obrigacao.update({
-      where: { id: req.params.id },
+      where: { id: param(req.params.id) },
       data,
     });
     res.json(updated);
@@ -59,7 +60,7 @@ obrigacoesRouter.put('/:id', authRequired, requirePapel('GESTOR'), async (req, r
 obrigacoesRouter.delete('/:id', authRequired, requirePapel('GESTOR'), async (req, res, next) => {
   try {
     await prisma.obrigacao.update({
-      where: { id: req.params.id },
+      where: { id: param(req.params.id) },
       data: { ativo: false },
     });
     res.status(204).send();
