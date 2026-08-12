@@ -1,0 +1,226 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum RegimeTributario {
+  MEI
+  SIMPLES
+  PRESUMIDO
+  REAL
+}
+
+enum Area {
+  FISCAL
+  CONTABIL
+  DP
+  SOCIETARIO
+}
+
+enum Esfera {
+  FEDERAL
+  ESTADUAL
+  MUNICIPAL
+  INTERNA
+}
+
+enum Periodicidade {
+  MENSAL
+  TRIMESTRAL
+  ANUAL
+  EVENTUAL
+}
+
+enum RegraVencimento {
+  DIA_FIXO
+  DIA_UTIL_N
+  ULTIMO_DIA_UTIL
+  ULTIMO_DIA_MES
+}
+
+enum AjusteDiaNaoUtil {
+  ANTECIPAR
+  POSTERGAR
+  MANTER
+}
+
+enum Criticidade {
+  BAIXA
+  MEDIA
+  ALTA
+  CRITICA
+}
+
+enum StatusTarefa {
+  PENDENTE
+  EM_ANDAMENTO
+  AGUARDANDO_CLIENTE
+  CONCLUIDA
+  DISPENSADA
+}
+
+enum Prioridade {
+  BAIXA
+  MEDIA
+  ALTA
+  URGENTE
+}
+
+enum Papel {
+  GESTOR
+  COLABORADOR
+}
+
+enum AbrangenciaFeriado {
+  NACIONAL
+  UF
+  MUNICIPIO
+}
+
+model Cliente {
+  id                   String           @id @default(cuid())
+  razaoSocial          String
+  cnpj                 String           @unique
+  regimeTributario     RegimeTributario
+  temFolha             Boolean          @default(false)
+  uf                   String
+  municipio            String
+  responsavelPadraoId  String?
+  ativo                Boolean          @default(true)
+  criadoEm             DateTime         @default(now())
+  atualizadoEm         DateTime         @updatedAt
+
+  responsavelPadrao Colaborador?      @relation("ResponsavelPadrao", fields: [responsavelPadraoId], references: [id])
+  obrigacoes        ClienteObrigacao[]
+
+  @@index([regimeTributario])
+  @@index([ativo])
+}
+
+model Colaborador {
+  id                String   @id @default(cuid())
+  nome              String
+  email             String   @unique
+  senhaHash         String?
+  cargo             String
+  area              Area
+  capacidadeMensal  Int      @default(160)
+  papel             Papel    @default(COLABORADOR)
+  ativo             Boolean  @default(true)
+  criadoEm          DateTime @default(now())
+  atualizadoEm      DateTime @updatedAt
+
+  clientesPadrao    Cliente[]           @relation("ResponsavelPadrao")
+  obrigacoes        ClienteObrigacao[]  @relation("ResponsavelObrigacao")
+  tarefas           Tarefa[]            @relation("ResponsavelTarefa")
+  eventosAutor      TarefaEvento[]      @relation("AutorEvento")
+}
+
+model Obrigacao {
+  id                String            @id @default(cuid())
+  codigo            String            @unique
+  nome              String
+  area              Area
+  esfera            Esfera
+  periodicidade     Periodicidade
+  regraVencimento   RegraVencimento
+  dia               Int?
+  mesesDefasagem    Int               @default(1)
+  ajusteDiaNaoUtil  AjusteDiaNaoUtil  @default(POSTERGAR)
+  criticidade       Criticidade       @default(MEDIA)
+  multaBase         Decimal           @default(0) @db.Decimal(12, 2)
+  multaPercentual   Decimal           @default(0) @db.Decimal(5, 2)
+  baseLegal         String?
+  regimesAplicaveis RegimeTributario[]
+  requerFolha       Boolean           @default(false)
+  ativo             Boolean           @default(true)
+  criadoEm          DateTime          @default(now())
+  atualizadoEm      DateTime          @updatedAt
+
+  clientes ClienteObrigacao[]
+}
+
+model ClienteObrigacao {
+  id              String    @id @default(cuid())
+  clienteId       String
+  obrigacaoId     String
+  responsavelId   String?
+  diaCustomizado  Int?
+  vigenciaInicio  DateTime  @db.Date
+  vigenciaFim     DateTime? @db.Date
+  ativo           Boolean   @default(true)
+  criadoEm        DateTime  @default(now())
+  atualizadoEm    DateTime  @updatedAt
+
+  cliente     Cliente     @relation(fields: [clienteId], references: [id], onDelete: Cascade)
+  obrigacao   Obrigacao   @relation(fields: [obrigacaoId], references: [id])
+  responsavel Colaborador? @relation("ResponsavelObrigacao", fields: [responsavelId], references: [id])
+  tarefas     Tarefa[]
+
+  @@unique([clienteId, obrigacaoId])
+  @@index([ativo])
+}
+
+model Tarefa {
+  id                  String       @id @default(cuid())
+  clienteObrigacaoId  String
+  competencia         String
+  dataVencimento      DateTime     @db.Date
+  status              StatusTarefa @default(PENDENTE)
+  prioridade          Prioridade   @default(MEDIA)
+  responsavelId       String?
+  dataConclusao       DateTime?
+  protocolo           String?
+  observacao          String?
+  evidenciaDescricao  String?
+  evidenciaNomeArquivo String?
+  evidenciaMimeType   String?
+  evidenciaCaminho    String?
+  esforcoEstimado     Int          @default(2)
+  criadoEm            DateTime     @default(now())
+  atualizadoEm        DateTime     @updatedAt
+
+  clienteObrigacao ClienteObrigacao @relation(fields: [clienteObrigacaoId], references: [id], onDelete: Cascade)
+  responsavel      Colaborador?     @relation("ResponsavelTarefa", fields: [responsavelId], references: [id])
+  eventos          TarefaEvento[]
+
+  @@unique([clienteObrigacaoId, competencia])
+  @@index([dataVencimento])
+  @@index([status])
+  @@index([responsavelId])
+  @@index([competencia])
+}
+
+model TarefaEvento {
+  id            String        @id @default(cuid())
+  tarefaId      String
+  statusAnterior StatusTarefa?
+  statusNovo    StatusTarefa?
+  responsavelAnteriorId String?
+  responsavelNovoId     String?
+  autorId       String?
+  observacao    String?
+  criadoEm      DateTime      @default(now())
+
+  tarefa Tarefa       @relation(fields: [tarefaId], references: [id], onDelete: Cascade)
+  autor  Colaborador? @relation("AutorEvento", fields: [autorId], references: [id])
+
+  @@index([tarefaId])
+  @@index([criadoEm])
+}
+
+model Feriado {
+  id          String             @id @default(cuid())
+  data        DateTime           @db.Date
+  nome        String
+  abrangencia AbrangenciaFeriado @default(NACIONAL)
+  uf          String?
+  municipio   String?
+
+  @@index([data])
+  @@index([abrangencia, uf, municipio])
+}
