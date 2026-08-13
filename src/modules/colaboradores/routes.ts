@@ -56,6 +56,18 @@ colaboradoresRouter.get('/:id', authRequired, async (req, res, next) => {
 colaboradoresRouter.post('/', authRequired, requirePapel('GESTOR'), async (req, res, next) => {
   try {
     const data = createColaboradorSchema.parse(req.body);
+    const existente = await prisma.colaborador.findUnique({ where: { email: data.email } });
+    if (existente) {
+      if (!existente.ativo) {
+        throw new AppError(
+          409,
+          'Já existe uma conta inativa com este e-mail. Peça ao colaborador para solicitar reativação ou aprove o pedido pendente.',
+          'CONTA_INATIVA_EXISTENTE',
+        );
+      }
+      throw new AppError(409, 'Já existe um colaborador com este e-mail');
+    }
+
     const senhaHash = data.senha ? await bcrypt.hash(data.senha, 10) : null;
     const { senha: _s, ...rest } = data;
     const created = await prisma.colaborador.create({

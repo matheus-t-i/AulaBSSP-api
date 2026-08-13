@@ -5,6 +5,7 @@ export class AppError extends Error {
   constructor(
     public statusCode: number,
     message: string,
+    public code?: string,
   ) {
     super(message);
     this.name = 'AppError';
@@ -13,7 +14,10 @@ export class AppError extends Error {
 
 export function errorHandler(err: unknown, _req: Request, res: Response, _next: NextFunction) {
   if (err instanceof AppError) {
-    return res.status(err.statusCode).json({ error: err.message });
+    return res.status(err.statusCode).json({
+      error: err.message,
+      ...(err.code ? { code: err.code } : {}),
+    });
   }
 
   if (err instanceof ZodError) {

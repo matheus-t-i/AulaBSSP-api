@@ -109,3 +109,19 @@ export const loginSchema = z.object({
   email: z.string().email(),
   senha: z.string().min(1),
 });
+
+export const alterarSenhaSchema = z
+  .object({
+    senhaAtual: z.string().min(1, 'Informe a senha atual'),
+    senhaNova: z.string().min(6, 'A nova senha deve ter ao menos 6 caracteres'),
+    confirmarSenha: z.string().min(1, 'Confirme a nova senha'),
+  })
+  .refine((d) => d.senhaNova === d.confirmarSenha, {
+    message: 'A confirmação não confere com a nova senha',
+    path: ['confirmarSenha'],
+  });
+
+export const solicitarReativacaoSchema = z.object({
+  email: z.string().email(),
+  senhaNova: z.string().min(6, 'A nova senha deve ter ao menos 6 caracteres'),
+});

@@ -82,6 +82,12 @@ enum AbrangenciaFeriado {
   MUNICIPIO
 }
 
+enum StatusReativacao {
+  PENDENTE
+  APROVADO
+  RECUSADO
+}
+
 model Cliente {
   id                   String           @id @default(cuid())
   razaoSocial          String
@@ -119,6 +125,24 @@ model Colaborador {
   obrigacoes        ClienteObrigacao[]  @relation("ResponsavelObrigacao")
   tarefas           Tarefa[]            @relation("ResponsavelTarefa")
   eventosAutor      TarefaEvento[]      @relation("AutorEvento")
+  reativacoes       ReativacaoPedido[]  @relation("ReativacaoColaborador")
+  reativacoesDecididas ReativacaoPedido[] @relation("ReativacaoDecisor")
+}
+
+model ReativacaoPedido {
+  id             String            @id @default(cuid())
+  colaboradorId  String
+  senhaHashNova  String?
+  status         StatusReativacao  @default(PENDENTE)
+  criadoEm       DateTime          @default(now())
+  decididoEm     DateTime?
+  decididoPorId  String?
+
+  colaborador Colaborador  @relation("ReativacaoColaborador", fields: [colaboradorId], references: [id], onDelete: Cascade)
+  decididoPor Colaborador? @relation("ReativacaoDecisor", fields: [decididoPorId], references: [id])
+
+  @@index([status])
+  @@index([colaboradorId])
 }
 
 model Obrigacao {
